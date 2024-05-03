@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    * {
+      margin: 0px;
+      padding: 0px
+    }
+
+    ::-webkit-scrollbar {
+      height: 0px;
+      width: 0px;
+    }
+
+    body {
+      width: 100%;
+      height: 100vh;
+      background-color: black;
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const FS = 15;
+    const CA = Math.ceil(Math.abs(W / FS));
+    const LL = Math.ceil(Math.abs(H / FS));
+
+    const canvas = document.createElement('canvas');
+    canvas.style.background = "black";
+    canvas.width = W;
+    canvas.height = H;
+
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
+    const data = [];
+    let sc = [];
+
+    const BL = [
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+      'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+      'U', 'V', 'W', 'X', 'Y', 'Z',
+      'あ', 'い', 'う', 'え', 'お', 'か', 'き', 'く', 'け', 'こ',
+      'さ', 'し', 'す', 'せ', 'そ', 'た', 'ち', 'つ', 'て', 'と',
+      'な', 'に', 'ぬ', 'ね', 'の', 'は', 'ひ', 'ふ', 'へ', 'ほ',
+      'ま', 'み', 'む', 'め', 'も', 'や', 'ゆ', 'よ',
+      'ら', 'り', 'る', 'れ', 'ろ', 'わ', 'を', 'ん',
+      'ァ', 'ィ', 'ゥ', 'ェ', 'ォ', 'ャ', 'ュ', 'ョ',
+      'ア', 'イ', 'ウ', 'エ', 'オ', 'カ', 'キ', 'ク', 'ケ', 'コ',
+      'サ', 'シ', 'ス', 'セ', 'ソ', 'タ', 'チ', 'ツ', 'テ', 'ト',
+      'ナ', 'ニ', 'ヌ', 'ネ', 'ノ', 'ハ', 'ヒ', 'フ', 'ヘ', 'ホ',
+      'マ', 'ミ', 'ム', 'メ', 'モ', 'ヤ', 'ユ', 'ヨ',
+      'ラ', 'リ', 'ル', 'レ', 'ロ', 'ワ', 'ヲ', 'ン'
+    ];
+
+    const initializeColumns = () => {
+      for (let i = 0; i < CA; i++) {
+        const px = i * FS;
+        let col_data = [];
+        for (let x = 0; x < LL; x++) {
+          const py = (x * FS) + FS;
+          col_data.push({
+            c: BL[Math.floor(Math.random() * BL.length)],
+            t: 30, //normal: 90
+            u: 0,
+            b: false,
+            x: px,
+            y: py,
+            o: 1
+          })
+        }
+
+        data.push({
+          t: 10, //normal: 25
+          u: 0,
+          ci: px,
+          d: col_data
+        })
+      }
+    }
+
+    const drawLetters = () => {
+      for (let i = 0; i < data.length; i++) {
+        const element = data[i];
+
+        ctx.fillStyle = "black";
+        ctx.font = `${FS}px, Arial`;
+        ctx.fillText(element.c, element.x, element.y, FS);
+      }
+    }
+
+    const delayHelper = async (timemout_ms) => {
+      return new Promise(resolve => setTimeout(() => resolve(), timemout_ms))
+    }
+
+    const resolveDrawLetter = async (c, i, ci) => {
+      if (c.o <= 0) return;
+
+      ctx.fillStyle = !c.b ? "#ffffff" : `rgba(0, 255, 0, ${c.o})`;
+      ctx.font = `bolder ${FS}px, Arial`;
+      ctx.fillText(c.c, c.x, c.y, FS);
+      c.b = true;
+
+      if (c.u === 0) c.u = Date.now();
+
+      if (c.u !== 0 && (Date.now() - c.u) >= c.t) {
+        c.o -= (0.1).toFixed(1);
+        c.u = Date.now();
+      }
+
+      for (let x = 0; x < data.length; x++) {
+        if (data[x].ci === ci) {
+          return data[x].d[i] = {
+            ...c
+          }
+        }
+      }
+    }
+
+    const handleUniqueColumn = async (target_x) => {
+      const fce = data.filter(v => v.ci === target_x)[0];
+
+      for (let i = 0; i < fce.d.length; i++) {
+        const e = fce.d[i];
+
+        if (!e.b) {
+
+          if (fce.u === 0) {
+            resolveDrawLetter(e, i, fce.ci);
+            fce.u = Date.now();
+          }
+
+          if (fce.u !== 0 && (Date.now() - fce.u) >= fce.t) {
+            resolveDrawLetter(e, i, fce.ci);
+            fce.u = Date.now();
+          }
+
+        } else {
+          resolveDrawLetter(e, i, fce.ci);
+        }
+      }
+
+      let icr = fce.d.reduce((acc, y) => {
+        acc.o = y.o <= 0 ? acc.o + 1 : acc.o;
+        if (y.b) return { ...acc, t: acc.t + 1 };
+        return { ...acc, f: acc.f + 1 }
+      }, { f: 0, t: 0, o: 0 });
+
+      if (icr.f === 0 && (icr.t === icr.o)) {
+        for (let h = 0; h < fce.d.length; h++) {
+          fce.d[h] = {
+            ...fce.d[h],
+            o: 1,
+            u: 0,
+            b: false
+          }
+        }
+
+        sc = sc.filter(k => k !== target_x);
+      }
+    }
+
+    const eventLoop = async () => {
+      ctx.clearRect(0, 0, W, H);
+      const cp = [];
+
+      for (let i = 0; i < CA; i++) {
+        cp.push(i * FS);
+      }
+
+      if (sc.length < cp.length) {
+        const hv = cp.filter(v => !sc.includes(v) ? v : false).filter(z => z);
+        sc.push(hv[Math.floor(Math.random() * hv.length)]);
+      }
+
+      for (const p of sc) {
+        handleUniqueColumn(p);
+      }
+
+      requestAnimationFrame(() => eventLoop());
+    }
+
+    initializeColumns();
+    eventLoop();
+  </script>
+</body>
+
+</html>
